@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>مای‌مارکت - مدیریت موجودی</title>
+<meta name="theme-color" content="#C1442E" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F1DE;
+    --ink: #20281F;
+    --tomato: #C1442E;
+    --green: #4C7A52;
+    --amber: #C68A2E;
+    --red: #8C2F26;
+    --card: #FFFDF6;
+    --line: rgba(32,40,31,0.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    font-family: 'Vazirmatn', sans-serif;
+    direction: rtl;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 20px 14px 60px;
+    padding-top: max(20px, env(safe-area-inset-top));
+  }
+  .mm-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .mm-title { font-weight:800; font-size:22px; display:flex; align-items:center; gap:8px; }
+  .mm-title .stamp { background:var(--tomato); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:3px; transform:rotate(-4deg); display:inline-block; }
+  .mm-add-btn { background:var(--ink); color:var(--bg); border:none; border-radius:10px; padding:10px 16px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; }
+  .mm-add-btn:active { transform:scale(.97); }
+  .mm-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+  .mm-stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 8px; text-align:center; }
+  .mm-stat b { display:block; font-size:18px; font-weight:800; }
+  .mm-stat span { font-size:11px; opacity:.7; }
+  .mm-toolbar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .mm-search { flex:1; min-width:140px; padding:9px 12px; border-radius:8px; border:1px solid var(--line); background:var(--card); font-family:inherit; font-size:13px; color:var(--ink); }
+  .mm-filters { display:flex; gap:6px; overflow-x:auto; margin-bottom:14px; }
+  .mm-filter-btn { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:7px 12px; font-size:12px; font-family:inherit; font-weight:500; white-space:nowrap; cursor:pointer; }
+  .mm-filter-btn.active { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .mm-grid { display:grid; grid-template-columns:1fr; gap:12px; }
+  @media (min-width:640px) { .mm-grid { grid-template-columns:1fr 1fr; } }
+  .mm-card { position:relative; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; border-inline-start:5px solid var(--status-color, var(--green)); overflow:hidden; }
+  .mm-tag { position:absolute; top:10px; left:-28px; transform:rotate(-40deg); background:var(--status-color, var(--green)); color:#fff; font-size:10px; font-weight:700; padding:3px 32px; }
+  .mm-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
+  .mm-name { font-weight:700; font-size:15px; }
+  .mm-cat { font-size:11px; opacity:.65; margin-top:2px; }
+  .mm-price { font-weight:800; font-size:14px; font-variant-numeric:tabular-nums; }
+  .mm-meta-row { display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .mm-qty-ctrl { display:flex; align-items:center; gap:6px; }
+  .mm-qty-ctrl button { width:24px; height:24px; border-radius:6px; border:1px solid var(--line); background:#fff; font-family:inherit; font-weight:700; cursor:pointer; line-height:1; }
+  .mm-qty-val { font-weight:800; min-width:26px; text-align:center; font-variant-numeric:tabular-nums; }
+  .mm-dates { font-size:11px; opacity:.75; line-height:1.7; }
+  .mm-status-label { font-size:11px; font-weight:700; color:var(--status-color, var(--green)); }
+  .mm-card-actions { display:flex; gap:6px; margin-top:10px; }
+  .mm-card-actions button { flex:1; font-family:inherit; font-size:12px; padding:7px; border-radius:7px; cursor:pointer; border:1px solid var(--line); background:#fff; }
+  .mm-card-actions .danger { color:var(--red); border-color:var(--red); }
+  .mm-empty { text-align:center; padding:40px 10px; opacity:.6; font-size:13px; }
+  .mm-overlay { position:fixed; inset:0; background:rgba(32,40,31,.45); display:flex; align-items:flex-end; justify-content:center; z-index:50; }
+  @media (min-width:640px) { .mm-overlay { align-items:center; } }
+  .mm-modal { background:var(--bg); width:100%; max-width:440px; max-height:88vh; overflow-y:auto; border-radius:16px 16px 0 0; padding:18px; }
+  @media (min-width:640px) { .mm-modal { border-radius:16px; } }
+  .mm-modal h3 { margin:0 0 14px; font-size:17px; font-weight:800; }
+  .mm-field { margin-bottom:10px; }
+  .mm-field label { display:block; font-size:12px; font-weight:700; margin-bottom:4px; opacity:.8; }
+  .mm-field input, .mm-field select, .mm-field textarea { width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--line); font-family:inherit; font-size:13px; background:#fff; color:var(--ink); }
+  .mm-field-row { display:flex; gap:8px; }
+  .mm-field-row .mm-field { flex:1; }
+  .mm-modal-actions { display:flex; gap:8px; margin-top:14px; }
+  .mm-modal-actions button { flex:1; padding:10px; border-radius:9px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; border:none; }
+  .mm-btn-save { background:var(--tomato); color:#fff; }
+  .mm-btn-cancel { background:transparent; border:1px solid var(--line) !important; color:var(--ink); }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="mm-header">
+  <div class="mm-title">مای‌مارکت <span class="stamp">مدیریت موجودی</span></div>
+  <button class="mm-add-btn" id="btnAdd">+ محصول جدید</button>
+</div>
+
+<div class="mm-stats">
+  <div class="mm-stat"><b id="statTotal">0</b><span>کل اقلام</span></div>
+  <div class="mm-stat"><b id="statLow" style="color:var(--amber)">0</b><span>موجودی کم</span></div>
+  <div class="mm-stat"><b id="statSoon" style="color:var(--amber)">0</b><span>نزدیک انقضا</span></div>
+  <div class="mm-stat"><b id="statExpired" style="color:var(--red)">0</b><span>منقضی</span></div>
+</div>
+
+<div class="mm-toolbar">
+  <input class="mm-search" id="search" placeholder="جستجوی محصول یا دسته…" />
+</div>
+<div class="mm-filters" id="filters"></div>
+
+<div class="mm-grid" id="grid"></div>
+<div class="mm-empty hidden" id="emptyMsg">محصولی پیدا نشد.</div>
+
+<div class="mm-overlay hidden" id="overlay">
+  <div class="mm-modal" onclick="event.stopPropagation()">
+    <h3 id="modalTitle">محصول جدید</h3>
+    <form id="productForm">
+      <div class="mm-field">
+        <label>نام محصول</label>
+        <input required id="f_name" />
+      </div>
+      <div class="mm-field-row">
+        <div class="mm-field">
+          <label>دسته‌بندی</label>
+          <select id="f_category"></select>
+        </div>
+        <div class="mm-field">
+          <label>واحد</label>
+          <select id="f_unit"></select>
+        </div>
+      </div>
+      <div class="mm-field-row">
+        <div class="mm-field">
+          <label>قیمت (تومان)</label>
+          <input type="number" min="0" id="f_price" />
+        </div>
+        <div class="mm-field">
+          <label>موجودی</label>
+          <input type="number" min="0" id="f_qty" />
+        </div>
+      </div>
+      <div class="mm-field-row">
+        <div class="mm-field">
+          <label>تاریخ تولید</label>
+          <input type="date" id="f_produced" />
+        </div>
+        <div class="mm-field">
+          <label>تاریخ انقضا</label>
+          <input type="date" id="f_expiry" />
+        </div>
+      </div>
+      <div class="mm-field">
+        <label>توضیحات (اختیاری)</label>
+        <textarea rows="2" id="f_note"></textarea>
+      </div>
+      <div class="mm-modal-actions">
+        <button type="button" class="mm-btn-cancel" id="btnCancel">انصراف</button>
+        <button type="submit" class="mm-btn-save">ذخیره</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const CATS = ["لبنیات", "میوه و سبزی", "نان و غلات", "خواربار", "نوشیدنی", "سایر"];
+const UNITS = ["عدد", "کیلوگرم", "بسته", "لیتر"];
+const STORAGE_KEY = "mymarket:products";
+const LOW_STOCK_THRESHOLD = 5;
+const SOON_DAYS = 3;
+
+const STATUS_META = {
+  fresh:   { label: "موجود",        color: "var(--green)" },
+  low:     { label: "موجودی کم",     color: "var(--amber)" },
+  soon:    { label: "نزدیک انقضا",   color: "var(--amber)" },
+  expired: { label: "منقضی شده",     color: "var(--red)" },
+};
+const FILTERS = [["all","همه"],["fresh","موجود"],["low","موجودی کم"],["soon","نزدیک انقضا"],["expired","منقضی"]];
+
+let products = [];
+let filter = "all";
+let query = "";
+let editingId = null;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr); target.setHours(0,0,0,0);
+  return Math.round((target-today)/86400000);
+}
+function statusOf(p){
+  const d = daysUntil(p.expiry);
+  if(d !== null && d < 0) return "expired";
+  if(d !== null && d <= SOON_DAYS) return "soon";
+  if(Number(p.qty) <= LOW_STOCK_THRESHOLD) return "low";
+  return "fresh";
+}
+function fmtDate(d){
+  if(!d) return "—";
+  try { return new Date(d).toLocaleDateString("fa-IR",{year:"numeric",month:"2-digit",day:"2-digit"}); }
+  catch { return d; }
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) { products = JSON.parse(raw); return; }
+  } catch(e) {}
+  products = [
+    { id: uid(), name:"شیر پرچرب", category:"لبنیات", price:42000, qty:24, unit:"بسته", produced:"", expiry:"", note:"" },
+    { id: uid(), name:"گوجه‌فرنگی", category:"میوه و سبزی", price:38000, qty:3, unit:"کیلوگرم", produced:"", expiry:"", note:"" },
+  ];
+}
+function save(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); } catch(e) {}
+}
+
+function renderFilters(){
+  const el = document.getElementById("filters");
+  el.innerHTML = "";
+  FILTERS.forEach(([key,label]) => {
+    const b = document.createElement("button");
+    b.className = "mm-filter-btn" + (filter===key ? " active" : "");
+    b.textContent = label;
+    b.onclick = () => { filter = key; render(); };
+    el.appendChild(b);
+  });
+}
+
+function renderStats(){
+  let low=0, soon=0, expired=0;
+  products.forEach(p => {
+    const s = statusOf(p);
+    if(s==="low") low++;
+    if(s==="soon") soon++;
+    if(s==="expired") expired++;
+  });
+  document.getElementById("statTotal").textContent = products.length;
+  document.getElementById("statLow").textContent = low;
+  document.getElementById("statSoon").textContent = soon;
+  document.getElementById("statExpired").textContent = expired;
+}
+
+function renderGrid(){
+  const grid = document.getElementById("grid");
+  const emptyMsg = document.getElementById("emptyMsg");
+  grid.innerHTML = "";
+  const visible = products
+    .filter(p => filter==="all" ? true : statusOf(p)===filter)
+    .filter(p => p.name.toLowerCase().includes(query.trim().toLowerCase()) || p.category.includes(query.trim()));
+
+  if(visible.length === 0){
+    emptyMsg.classList.remove("hidden");
+    return;
+  }
+  emptyMsg.classList.add("hidden");
+
+  visible.forEach(p => {
+    const s = statusOf(p);
+    const meta = STATUS_META[s];
+    const d = daysUntil(p.expiry);
+    let expiryExtra = "";
+    if(d !== null && d >= 0 && s !== "fresh") expiryExtra = ` (${d} روز مانده)`;
+    if(d !== null && d < 0) expiryExtra = ` (${Math.abs(d)} روز پیش)`;
+
+    const card = document.createElement("div");
+    card.className = "mm-card";
+    card.style.setProperty("--status-color", meta.color);
+    card.innerHTML = `
+      <div class="mm-card-top">
+        <div>
+          <div class="mm-name"></div>
+          <div class="mm-cat"></div>
+        </div>
+        <div class="mm-price">${Number(p.price||0).toLocaleString("fa-IR")} تومان</div>
+      </div>
+      <div class="mm-dates">
+        <div>تاریخ تولید: ${fmtDate(p.produced)}</div>
+        <div>تاریخ انقضا: ${fmtDate(p.expiry)}${expiryExtra}</div>
+      </div>
+      <div class="mm-meta-row">
+        <div class="mm-qty-ctrl">
+          <button data-act="dec">−</button>
+          <span class="mm-qty-val">${p.qty}</span>
+          <button data-act="inc">+</button>
+          <span style="opacity:.6">${p.unit}</span>
+        </div>
+        <span class="mm-status-label">${meta.label}</span>
+      </div>
+      <div class="mm-card-actions">
+        <button data-act="edit">ویرایش</button>
+        <button data-act="del" class="danger">حذف</button>
+      </div>
+    `;
+    card.querySelector(".mm-name").textContent = p.name;
+    card.querySelector(".mm-cat").textContent = p.category;
+    card.querySelector('[data-act="dec"]').onclick = () => adjustQty(p.id, -1);
+    card.querySelector('[data-act="inc"]').onclick = () => adjustQty(p.id, 1);
+    card.querySelector('[data-act="edit"]').onclick = () => openEdit(p);
+    card.querySelector('[data-act="del"]').onclick = () => removeProduct(p.id);
+    grid.appendChild(card);
+  });
+}
+
+function render(){
+  renderFilters();
+  renderStats();
+  renderGrid();
+}
+
+function adjustQty(id, delta){
+  const p = products.find(x => x.id === id);
+  if(!p) return;
+  p.qty = Math.max(0, Number(p.qty) + delta);
+  save(); render();
+}
+function removeProduct(id){
+  products = products.filter(p => p.id !== id);
+  save(); render();
+}
+
+function fillSelect(el, options){
+  el.innerHTML = "";
+  options.forEach(o => {
+    const opt = document.createElement("option");
+    opt.value = o; opt.textContent = o;
+    el.appendChild(opt);
+  });
+}
+
+function openModal(p){
+  editingId = p.id || null;
+  document.getElementById("modalTitle").textContent = editingId ? "ویرایش محصول" : "محصول جدید";
+  document.getElementById("f_name").value = p.name || "";
+  document.getElementById("f_category").value = p.category || CATS[0];
+  document.getElementById("f_unit").value = p.unit || UNITS[0];
+  document.getElementById("f_price").value = p.price || "";
+  document.getElementById("f_qty").value = p.qty || "";
+  document.getElementById("f_produced").value = p.produced || "";
+  document.getElementById("f_expiry").value = p.expiry || "";
+  document.getElementById("f_note").value = p.note || "";
+  document.getElementById("overlay").classList.remove("hidden");
+}
+function openEdit(p){ openModal(p); }
+function closeModal(){ document.getElementById("overlay").classList.add("hidden"); editingId = null; }
+
+document.getElementById("btnAdd").onclick = () => openModal({});
+document.getElementById("btnCancel").onclick = closeModal;
+document.getElementById("overlay").onclick = closeModal;
+document.getElementById("search").oninput = (e) => { query = e.target.value; render(); };
+
+document.getElementById("productForm").onsubmit = (e) => {
+  e.preventDefault();
+  const name = document.getElementById("f_name").value.trim();
+  if(!name) return;
+  const data = {
+    name,
+    category: document.getElementById("f_category").value,
+    unit: document.getElementById("f_unit").value,
+    price: document.getElementById("f_price").value,
+    qty: document.getElementById("f_qty").value,
+    produced: document.getElementById("f_produced").value,
+    expiry: document.getElementById("f_expiry").value,
+    note: document.getElementById("f_note").value,
+  };
+  if(editingId){
+    const idx = products.findIndex(p => p.id === editingId);
+    if(idx > -1) products[idx] = { ...products[idx], ...data };
+  } else {
+    products.unshift({ id: uid(), ...data });
+  }
+  save();
+  closeModal();
+  render();
+};
+
+fillSelect(document.getElementById("f_category"), CATS);
+fillSelect(document.getElementById("f_unit"), UNITS);
+load();
+render();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
