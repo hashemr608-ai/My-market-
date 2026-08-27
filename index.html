@@ -31,11 +31,17 @@
     padding: 20px 14px 60px;
     padding-top: max(20px, env(safe-area-inset-top));
   }
-  .mm-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .mm-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
   .mm-title { font-weight:800; font-size:22px; display:flex; align-items:center; gap:8px; }
   .mm-title .stamp { background:var(--tomato); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:3px; transform:rotate(-4deg); display:inline-block; }
-  .mm-add-btn { background:var(--ink); color:var(--bg); border:none; border-radius:10px; padding:10px 16px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; }
+  .mm-header-btns { display:flex; gap:6px; }
+  .mm-icon-btn { background:var(--card); border:1px solid var(--line); color:var(--ink); border-radius:10px; width:38px; height:38px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .mm-add-btn { background:var(--ink); color:var(--bg); border:none; border-radius:10px; padding:10px 16px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; white-space:nowrap; }
   .mm-add-btn:active { transform:scale(.97); }
+
+  .mm-actions-row { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .mm-action-chip { flex:1; min-width:120px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:9px 10px; font-family:inherit; font-size:12px; font-weight:700; color:var(--ink); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+
   .mm-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
   .mm-stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 8px; text-align:center; }
   .mm-stat b { display:block; font-size:18px; font-weight:800; }
@@ -48,11 +54,12 @@
   .mm-grid { display:grid; grid-template-columns:1fr; gap:12px; }
   @media (min-width:640px) { .mm-grid { grid-template-columns:1fr 1fr; } }
   .mm-card { position:relative; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; border-inline-start:5px solid var(--status-color, var(--green)); overflow:hidden; }
-  .mm-tag { position:absolute; top:10px; left:-28px; transform:rotate(-40deg); background:var(--status-color, var(--green)); color:#fff; font-size:10px; font-weight:700; padding:3px 32px; }
   .mm-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
   .mm-name { font-weight:700; font-size:15px; }
   .mm-cat { font-size:11px; opacity:.65; margin-top:2px; }
-  .mm-price { font-weight:800; font-size:14px; font-variant-numeric:tabular-nums; }
+  .mm-price-block { text-align:left; }
+  .mm-price-line { font-weight:800; font-size:13px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .mm-price-sub { font-size:10px; opacity:.6; font-weight:500; }
   .mm-meta-row { display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
   .mm-qty-ctrl { display:flex; align-items:center; gap:6px; }
   .mm-qty-ctrl button { width:24px; height:24px; border-radius:6px; border:1px solid var(--line); background:#fff; font-family:inherit; font-weight:700; cursor:pointer; line-height:1; }
@@ -65,7 +72,7 @@
   .mm-empty { text-align:center; padding:40px 10px; opacity:.6; font-size:13px; }
   .mm-overlay { position:fixed; inset:0; background:rgba(32,40,31,.45); display:flex; align-items:flex-end; justify-content:center; z-index:50; }
   @media (min-width:640px) { .mm-overlay { align-items:center; } }
-  .mm-modal { background:var(--bg); width:100%; max-width:440px; max-height:88vh; overflow-y:auto; border-radius:16px 16px 0 0; padding:18px; }
+  .mm-modal { background:var(--bg); width:100%; max-width:460px; max-height:88vh; overflow-y:auto; border-radius:16px 16px 0 0; padding:18px; }
   @media (min-width:640px) { .mm-modal { border-radius:16px; } }
   .mm-modal h3 { margin:0 0 14px; font-size:17px; font-weight:800; }
   .mm-field { margin-bottom:10px; }
@@ -77,14 +84,55 @@
   .mm-modal-actions button { flex:1; padding:10px; border-radius:9px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; border:none; }
   .mm-btn-save { background:var(--tomato); color:#fff; }
   .mm-btn-cancel { background:transparent; border:1px solid var(--line) !important; color:var(--ink); }
+  .mm-hint { font-size:11px; opacity:.65; margin-top:-4px; margin-bottom:10px; }
   .hidden { display:none !important; }
+
+  .mm-conv-note { font-size:11px; background:rgba(193,68,46,0.08); border:1px dashed var(--tomato); border-radius:8px; padding:8px 10px; margin-bottom:10px; }
+
+  /* invoice */
+  .inv-add-row { display:flex; gap:6px; align-items:flex-end; margin-bottom:10px; }
+  .inv-add-row select { flex:2; }
+  .inv-add-row input { flex:1; }
+  .inv-add-row button { flex:0 0 auto; background:var(--tomato); color:#fff; border:none; border-radius:8px; padding:9px 12px; font-family:inherit; font-weight:700; cursor:pointer; }
+  .inv-items { border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:10px; }
+  .inv-item-row { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--line); background:#fff; }
+  .inv-item-row:last-child { border-bottom:none; }
+  .inv-item-row .rm { color:var(--red); background:none; border:none; font-weight:700; cursor:pointer; font-family:inherit; }
+  .inv-total { display:flex; justify-content:space-between; font-weight:800; font-size:15px; padding:10px 4px; }
+
+  /* backup */
+  .backup-row { display:flex; gap:8px; }
+  .backup-row label { flex:1; }
+  .backup-row button, .backup-row .filebtn { flex:1; padding:10px; border-radius:9px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; border:1px solid var(--line); background:#fff; text-align:center; display:block; }
+
+  /* printable invoice */
+  #printArea { display:none; }
+  @media print {
+    body * { visibility:hidden; }
+    #printArea, #printArea * { visibility:visible; }
+    #printArea { display:block; position:absolute; top:0; right:0; width:100%; padding:20px; }
+  }
+  .pi-header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:14px; }
+  .pi-header h2 { margin:0; font-size:20px; }
+  .pi-meta { font-size:12px; margin-bottom:14px; display:flex; justify-content:space-between; }
+  .pi-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .pi-table th, .pi-table td { border:1px solid #ccc; padding:6px 8px; text-align:right; }
+  .pi-total { text-align:left; font-weight:800; font-size:15px; margin-top:12px; }
 </style>
 </head>
 <body>
 
 <div class="mm-header">
   <div class="mm-title">مای‌مارکت <span class="stamp">مدیریت موجودی</span></div>
-  <button class="mm-add-btn" id="btnAdd">+ محصول جدید</button>
+  <div class="mm-header-btns">
+    <button class="mm-icon-btn" id="btnSettings" title="نرخ ارز">$</button>
+    <button class="mm-add-btn" id="btnAdd">+ محصول</button>
+  </div>
+</div>
+
+<div class="mm-actions-row">
+  <button class="mm-action-chip" id="btnInvoice">🧾 فاکتور جدید</button>
+  <button class="mm-action-chip" id="btnBackup">💾 پشتیبان‌گیری</button>
 </div>
 
 <div class="mm-stats">
@@ -102,6 +150,7 @@
 <div class="mm-grid" id="grid"></div>
 <div class="mm-empty hidden" id="emptyMsg">محصولی پیدا نشد.</div>
 
+<!-- product modal -->
 <div class="mm-overlay hidden" id="overlay">
   <div class="mm-modal" onclick="event.stopPropagation()">
     <h3 id="modalTitle">محصول جدید</h3>
@@ -120,15 +169,27 @@
           <select id="f_unit"></select>
         </div>
       </div>
+      <div class="mm-field">
+        <label>واحد پول قیمت‌گذاری</label>
+        <select id="f_currency">
+          <option value="toman">تومان</option>
+          <option value="aed">درهم امارات (AED)</option>
+        </select>
+      </div>
       <div class="mm-field-row">
         <div class="mm-field">
-          <label>قیمت (تومان)</label>
-          <input type="number" min="0" id="f_price" />
+          <label id="lbl_wholesale">قیمت عمده</label>
+          <input type="number" min="0" step="0.01" id="f_wholesale" />
         </div>
         <div class="mm-field">
-          <label>موجودی</label>
-          <input type="number" min="0" id="f_qty" />
+          <label id="lbl_retail">قیمت تک‌فروشی</label>
+          <input type="number" min="0" step="0.01" id="f_retail" />
         </div>
+      </div>
+      <div class="mm-hint" id="convHint"></div>
+      <div class="mm-field">
+        <label>موجودی</label>
+        <input type="number" min="0" id="f_qty" />
       </div>
       <div class="mm-field-row">
         <div class="mm-field">
@@ -152,10 +213,86 @@
   </div>
 </div>
 
+<!-- settings modal -->
+<div class="mm-overlay hidden" id="settingsOverlay">
+  <div class="mm-modal" onclick="event.stopPropagation()">
+    <h3>نرخ تبدیل ارز</h3>
+    <div class="mm-field">
+      <label>نرخ هر ۱ درهم امارات (AED) به تومان</label>
+      <input type="number" min="0" id="s_aedRate" placeholder="مثلاً 18000" />
+    </div>
+    <div class="mm-hint">این نرخ برای نمایش معادل تومانی محصولاتی که به درهم قیمت‌گذاری شدن استفاده می‌شه.</div>
+    <div class="mm-modal-actions">
+      <button type="button" class="mm-btn-cancel" id="btnSettingsCancel">انصراف</button>
+      <button type="button" class="mm-btn-save" id="btnSettingsSave">ذخیره</button>
+    </div>
+  </div>
+</div>
+
+<!-- invoice modal -->
+<div class="mm-overlay hidden" id="invoiceOverlay">
+  <div class="mm-modal" onclick="event.stopPropagation()">
+    <h3>فاکتور جدید</h3>
+    <div class="mm-field">
+      <label>نام مشتری (اختیاری)</label>
+      <input id="inv_customer" placeholder="نام مشتری" />
+    </div>
+    <div class="inv-add-row">
+      <select id="inv_product"></select>
+      <select id="inv_priceType">
+        <option value="retail">تک‌فروشی</option>
+        <option value="wholesale">عمده</option>
+      </select>
+      <input type="number" min="1" id="inv_qty" placeholder="تعداد" value="1" />
+      <button type="button" id="inv_addBtn">افزودن</button>
+    </div>
+    <div class="inv-items" id="inv_items"></div>
+    <div class="inv-total"><span>جمع کل</span><span id="inv_total">۰ تومان</span></div>
+    <div class="mm-modal-actions">
+      <button type="button" class="mm-btn-cancel" id="btnInvoiceCancel">بستن</button>
+      <button type="button" class="mm-btn-save" id="btnInvoicePrint">چاپ / خروجی فاکتور</button>
+    </div>
+  </div>
+</div>
+
+<!-- backup modal -->
+<div class="mm-overlay hidden" id="backupOverlay">
+  <div class="mm-modal" onclick="event.stopPropagation()">
+    <h3>پشتیبان‌گیری و بازیابی</h3>
+    <div class="mm-hint" style="margin-bottom:14px;">اطلاعات با بروزرسانی برنامه پاک نمی‌شن، ولی برای اطمینان می‌تونید یه فایل پشتیبان بگیرید یا بازیابی کنید.</div>
+    <div class="backup-row">
+      <button type="button" id="btnExport">⬇️ دریافت فایل پشتیبان</button>
+      <label class="filebtn" for="importFile">⬆️ بازیابی از فایل</label>
+      <input type="file" id="importFile" accept="application/json" class="hidden" />
+    </div>
+    <div class="mm-modal-actions">
+      <button type="button" class="mm-btn-cancel" id="btnBackupClose">بستن</button>
+    </div>
+  </div>
+</div>
+
+<!-- printable invoice -->
+<div id="printArea">
+  <div class="pi-header">
+    <h2>مای‌مارکت</h2>
+    <div>فاکتور فروش</div>
+  </div>
+  <div class="pi-meta">
+    <span id="pi_customer"></span>
+    <span id="pi_date"></span>
+  </div>
+  <table class="pi-table">
+    <thead><tr><th>ردیف</th><th>کالا</th><th>تعداد</th><th>قیمت واحد (تومان)</th><th>جمع (تومان)</th></tr></thead>
+    <tbody id="pi_body"></tbody>
+  </table>
+  <div class="pi-total" id="pi_total"></div>
+</div>
+
 <script>
 const CATS = ["لبنیات", "میوه و سبزی", "نان و غلات", "خواربار", "نوشیدنی", "سایر"];
 const UNITS = ["عدد", "کیلوگرم", "بسته", "لیتر"];
 const STORAGE_KEY = "mymarket:products";
+const SETTINGS_KEY = "mymarket:settings";
 const LOW_STOCK_THRESHOLD = 5;
 const SOON_DAYS = 3;
 
@@ -168,11 +305,15 @@ const STATUS_META = {
 const FILTERS = [["all","همه"],["fresh","موجود"],["low","موجودی کم"],["soon","نزدیک انقضا"],["expired","منقضی"]];
 
 let products = [];
+let settings = { aedRate: 0 };
 let filter = "all";
 let query = "";
 let editingId = null;
+let invoiceItems = [];
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function toNum(v){ return Number(v) || 0; }
+function fmtToman(n){ return Math.round(n).toLocaleString("fa-IR") + " تومان"; }
 
 function daysUntil(dateStr){
   if(!dateStr) return null;
@@ -192,18 +333,46 @@ function fmtDate(d){
   try { return new Date(d).toLocaleDateString("fa-IR",{year:"numeric",month:"2-digit",day:"2-digit"}); }
   catch { return d; }
 }
+
+// price helpers: returns toman value for a given price field, converting from AED if needed
+function tomanPrice(p, field){
+  const raw = toNum(p[field]);
+  if(p.currency === "aed") return raw * toNum(settings.aedRate);
+  return raw;
+}
+
+function migrateProduct(p){
+  if(p.wholesale === undefined && p.retail === undefined){
+    const legacy = toNum(p.price);
+    p.currency = p.currency || "toman";
+    p.wholesale = legacy;
+    p.retail = legacy;
+  }
+  if(!p.currency) p.currency = "toman";
+  return p;
+}
+
 function load(){
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) { products = JSON.parse(raw); return; }
+    if(raw) { products = JSON.parse(raw).map(migrateProduct); }
+    else {
+      products = [
+        { id: uid(), name:"شیر پرچرب", category:"لبنیات", currency:"toman", wholesale:38000, retail:42000, qty:24, unit:"بسته", produced:"", expiry:"", note:"" },
+        { id: uid(), name:"گوجه‌فرنگی", category:"میوه و سبزی", currency:"toman", wholesale:34000, retail:38000, qty:3, unit:"کیلوگرم", produced:"", expiry:"", note:"" },
+      ];
+    }
+  } catch(e) { products = []; }
+  try {
+    const rawS = localStorage.getItem(SETTINGS_KEY);
+    if(rawS) settings = JSON.parse(rawS);
   } catch(e) {}
-  products = [
-    { id: uid(), name:"شیر پرچرب", category:"لبنیات", price:42000, qty:24, unit:"بسته", produced:"", expiry:"", note:"" },
-    { id: uid(), name:"گوجه‌فرنگی", category:"میوه و سبزی", price:38000, qty:3, unit:"کیلوگرم", produced:"", expiry:"", note:"" },
-  ];
 }
 function save(){
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); } catch(e) {}
+}
+function saveSettings(){
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e) {}
 }
 
 function renderFilters(){
@@ -230,6 +399,22 @@ function renderStats(){
   document.getElementById("statLow").textContent = low;
   document.getElementById("statSoon").textContent = soon;
   document.getElementById("statExpired").textContent = expired;
+}
+
+function priceBlockHtml(p){
+  const wTo = tomanPrice(p, "wholesale");
+  const rTo = tomanPrice(p, "retail");
+  if(p.currency === "aed"){
+    return `
+      <div class="mm-price-line">${toNum(p.retail).toLocaleString("fa-IR")} AED</div>
+      <div class="mm-price-sub">≈ ${fmtToman(rTo)}</div>
+      <div class="mm-price-sub">عمده: ${toNum(p.wholesale).toLocaleString("fa-IR")} AED (≈ ${fmtToman(wTo)})</div>
+    `;
+  }
+  return `
+    <div class="mm-price-line">${fmtToman(rTo)}</div>
+    <div class="mm-price-sub">عمده: ${fmtToman(wTo)}</div>
+  `;
 }
 
 function renderGrid(){
@@ -263,7 +448,7 @@ function renderGrid(){
           <div class="mm-name"></div>
           <div class="mm-cat"></div>
         </div>
-        <div class="mm-price">${Number(p.price||0).toLocaleString("fa-IR")} تومان</div>
+        <div class="mm-price-block">${priceBlockHtml(p)}</div>
       </div>
       <div class="mm-dates">
         <div>تاریخ تولید: ${fmtDate(p.produced)}</div>
@@ -306,6 +491,7 @@ function adjustQty(id, delta){
   save(); render();
 }
 function removeProduct(id){
+  if(!confirm("این محصول حذف بشه؟")) return;
   products = products.filter(p => p.id !== id);
   save(); render();
 }
@@ -319,17 +505,41 @@ function fillSelect(el, options){
   });
 }
 
+function updateCurrencyLabels(){
+  const cur = document.getElementById("f_currency").value;
+  const w = toNum(document.getElementById("f_wholesale").value);
+  const r = toNum(document.getElementById("f_retail").value);
+  document.getElementById("lbl_wholesale").textContent = "قیمت عمده" + (cur==="aed" ? " (درهم)" : " (تومان)");
+  document.getElementById("lbl_retail").textContent = "قیمت تک‌فروشی" + (cur==="aed" ? " (درهم)" : " (تومان)");
+  const hint = document.getElementById("convHint");
+  if(cur === "aed"){
+    if(!settings.aedRate){
+      hint.textContent = "⚠️ اول نرخ درهم رو از دکمهٔ $ بالا تنظیم کنید.";
+    } else {
+      hint.textContent = `معادل تومانی: عمده ${fmtToman(w*settings.aedRate)} — تک‌فروشی ${fmtToman(r*settings.aedRate)}`;
+    }
+  } else {
+    hint.textContent = "";
+  }
+}
+["f_currency","f_wholesale","f_retail"].forEach(id => {
+  document.getElementById(id).addEventListener("input", updateCurrencyLabels);
+});
+
 function openModal(p){
   editingId = p.id || null;
   document.getElementById("modalTitle").textContent = editingId ? "ویرایش محصول" : "محصول جدید";
   document.getElementById("f_name").value = p.name || "";
   document.getElementById("f_category").value = p.category || CATS[0];
   document.getElementById("f_unit").value = p.unit || UNITS[0];
-  document.getElementById("f_price").value = p.price || "";
+  document.getElementById("f_currency").value = p.currency || "toman";
+  document.getElementById("f_wholesale").value = p.wholesale ?? "";
+  document.getElementById("f_retail").value = p.retail ?? "";
   document.getElementById("f_qty").value = p.qty || "";
   document.getElementById("f_produced").value = p.produced || "";
   document.getElementById("f_expiry").value = p.expiry || "";
   document.getElementById("f_note").value = p.note || "";
+  updateCurrencyLabels();
   document.getElementById("overlay").classList.remove("hidden");
 }
 function openEdit(p){ openModal(p); }
@@ -348,7 +558,9 @@ document.getElementById("productForm").onsubmit = (e) => {
     name,
     category: document.getElementById("f_category").value,
     unit: document.getElementById("f_unit").value,
-    price: document.getElementById("f_price").value,
+    currency: document.getElementById("f_currency").value,
+    wholesale: document.getElementById("f_wholesale").value,
+    retail: document.getElementById("f_retail").value,
     qty: document.getElementById("f_qty").value,
     produced: document.getElementById("f_produced").value,
     expiry: document.getElementById("f_expiry").value,
@@ -364,6 +576,127 @@ document.getElementById("productForm").onsubmit = (e) => {
   closeModal();
   render();
 };
+
+/* ---------- settings (exchange rate) ---------- */
+document.getElementById("btnSettings").onclick = () => {
+  document.getElementById("s_aedRate").value = settings.aedRate || "";
+  document.getElementById("settingsOverlay").classList.remove("hidden");
+};
+document.getElementById("btnSettingsCancel").onclick = () => document.getElementById("settingsOverlay").classList.add("hidden");
+document.getElementById("settingsOverlay").onclick = () => document.getElementById("settingsOverlay").classList.add("hidden");
+document.getElementById("btnSettingsSave").onclick = () => {
+  settings.aedRate = toNum(document.getElementById("s_aedRate").value);
+  saveSettings();
+  document.getElementById("settingsOverlay").classList.add("hidden");
+  render();
+};
+
+/* ---------- invoice ---------- */
+function fillInvoiceProductSelect(){
+  const sel = document.getElementById("inv_product");
+  sel.innerHTML = "";
+  products.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+}
+document.getElementById("btnInvoice").onclick = () => {
+  invoiceItems = [];
+  document.getElementById("inv_customer").value = "";
+  fillInvoiceProductSelect();
+  renderInvoiceItems();
+  document.getElementById("invoiceOverlay").classList.remove("hidden");
+};
+document.getElementById("btnInvoiceCancel").onclick = () => document.getElementById("invoiceOverlay").classList.add("hidden");
+document.getElementById("invoiceOverlay").onclick = () => document.getElementById("invoiceOverlay").classList.add("hidden");
+
+document.getElementById("inv_addBtn").onclick = () => {
+  const pid = document.getElementById("inv_product").value;
+  const p = products.find(x => x.id === pid);
+  if(!p) return;
+  const priceType = document.getElementById("inv_priceType").value;
+  const qty = Math.max(1, toNum(document.getElementById("inv_qty").value) || 1);
+  const unitToman = tomanPrice(p, priceType);
+  invoiceItems.push({ name: p.name, qty, unitToman, lineTotal: unitToman * qty });
+  renderInvoiceItems();
+};
+
+function renderInvoiceItems(){
+  const el = document.getElementById("inv_items");
+  el.innerHTML = "";
+  let total = 0;
+  invoiceItems.forEach((it, idx) => {
+    total += it.lineTotal;
+    const row = document.createElement("div");
+    row.className = "inv-item-row";
+    row.innerHTML = `<span>${it.name} × ${it.qty}</span><span>${fmtToman(it.lineTotal)}</span><button class="rm" data-i="${idx}">حذف</button>`;
+    row.querySelector(".rm").onclick = () => { invoiceItems.splice(idx,1); renderInvoiceItems(); };
+    el.appendChild(row);
+  });
+  document.getElementById("inv_total").textContent = fmtToman(total);
+}
+
+document.getElementById("btnInvoicePrint").onclick = () => {
+  if(invoiceItems.length === 0){ alert("حداقل یه قلم کالا اضافه کنید."); return; }
+  const customer = document.getElementById("inv_customer").value.trim();
+  document.getElementById("pi_customer").textContent = customer ? "مشتری: " + customer : "";
+  document.getElementById("pi_date").textContent = "تاریخ: " + new Date().toLocaleDateString("fa-IR");
+  const body = document.getElementById("pi_body");
+  body.innerHTML = "";
+  let total = 0;
+  invoiceItems.forEach((it, idx) => {
+    total += it.lineTotal;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${idx+1}</td><td>${it.name}</td><td>${it.qty}</td><td>${Math.round(it.unitToman).toLocaleString("fa-IR")}</td><td>${Math.round(it.lineTotal).toLocaleString("fa-IR")}</td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById("pi_total").textContent = "جمع کل: " + fmtToman(total);
+  window.print();
+};
+
+/* ---------- backup / restore ---------- */
+document.getElementById("btnBackup").onclick = () => document.getElementById("backupOverlay").classList.remove("hidden");
+document.getElementById("btnBackupClose").onclick = () => document.getElementById("backupOverlay").classList.add("hidden");
+document.getElementById("backupOverlay").onclick = () => document.getElementById("backupOverlay").classList.add("hidden");
+
+document.getElementById("btnExport").onclick = () => {
+  const payload = { products, settings, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `mymarket-backup-${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+document.getElementById("importFile").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if(!Array.isArray(data.products)) throw new Error("invalid");
+      if(!confirm("بازیابی این فایل، اطلاعات فعلی رو جایگزین می‌کنه. ادامه بدم؟")) return;
+      products = data.products.map(migrateProduct);
+      settings = data.settings || settings;
+      save(); saveSettings();
+      document.getElementById("backupOverlay").classList.add("hidden");
+      render();
+      alert("بازیابی با موفقیت انجام شد.");
+    } catch(err) {
+      alert("فایل پشتیبان معتبر نیست.");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
 
 fillSelect(document.getElementById("f_category"), CATS);
 fillSelect(document.getElementById("f_unit"), UNITS);
