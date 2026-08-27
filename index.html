@@ -94,6 +94,12 @@
   .inv-add-row select { flex:2; }
   .inv-add-row input { flex:1; }
   .inv-add-row button { flex:0 0 auto; background:var(--tomato); color:#fff; border:none; border-radius:8px; padding:9px 12px; font-family:inherit; font-weight:700; cursor:pointer; }
+  .inv-results { position:absolute; top:100%; right:0; left:0; z-index:20; background:#fff; border:1px solid var(--line); border-radius:8px; max-height:220px; overflow-y:auto; margin-top:2px; box-shadow:0 4px 12px rgba(0,0,0,.12); }
+  .inv-result-item { padding:9px 12px; font-size:13px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .inv-result-item:last-child { border-bottom:none; }
+  .inv-result-item:active { background:var(--bg); }
+  .inv-result-empty { padding:9px 12px; font-size:12px; opacity:.6; }
+  .mm-grid-note { text-align:center; font-size:12px; opacity:.65; padding:10px; }
   .inv-items { border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:10px; }
   .inv-item-row { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--line); background:#fff; }
   .inv-item-row:last-child { border-bottom:none; }
@@ -148,6 +154,7 @@
 <div class="mm-filters" id="filters"></div>
 
 <div class="mm-grid" id="grid"></div>
+<div class="mm-grid-note" id="gridNote"></div>
 <div class="mm-empty hidden" id="emptyMsg">محصولی پیدا نشد.</div>
 
 <!-- product modal -->
@@ -161,8 +168,9 @@
       </div>
       <div class="mm-field-row">
         <div class="mm-field">
-          <label>دسته‌بندی</label>
-          <select id="f_category"></select>
+          <label>دسته‌بندی (اختیاری)</label>
+          <input id="f_category" list="categoryList" placeholder="مثلاً عطر، ادکلن، کرم..." />
+          <datalist id="categoryList"></datalist>
         </div>
         <div class="mm-field">
           <label>واحد</label>
@@ -237,14 +245,15 @@
       <label>نام مشتری (اختیاری)</label>
       <input id="inv_customer" placeholder="نام مشتری" />
     </div>
-    <div class="inv-add-row">
-      <select id="inv_product"></select>
+    <div class="inv-add-row" style="flex-wrap:wrap; position:relative;">
+      <input type="text" id="inv_productSearch" placeholder="جستجوی محصول…" autocomplete="off" style="flex:2; min-width:150px;" />
       <select id="inv_priceType">
         <option value="retail">تک‌فروشی</option>
         <option value="wholesale">عمده</option>
       </select>
-      <input type="number" min="1" id="inv_qty" placeholder="تعداد" value="1" />
+      <input type="number" min="1" id="inv_qty" placeholder="تعداد" value="1" style="flex:1; min-width:60px;" />
       <button type="button" id="inv_addBtn">افزودن</button>
+      <div id="inv_productResults" class="inv-results hidden"></div>
     </div>
     <div class="inv-items" id="inv_items"></div>
     <div class="inv-total"><span>جمع کل</span><span id="inv_total">۰ تومان</span></div>
@@ -289,8 +298,8 @@
 </div>
 
 <script>
-const CATS = ["لبنیات", "میوه و سبزی", "نان و غلات", "خواربار", "نوشیدنی", "سایر"];
-const UNITS = ["عدد", "کیلوگرم", "بسته", "لیتر"];
+const UNITS = ["عدد", "بسته", "ست", "میلی‌لیتر"];
+const RENDER_LIMIT = 60;
 const STORAGE_KEY = "mymarket:products";
 const SETTINGS_KEY = "mymarket:settings";
 const LOW_STOCK_THRESHOLD = 5;
@@ -387,6 +396,12 @@ function renderFilters(){
   });
 }
 
+function renderCategoryDatalist(){
+  const dl = document.getElementById("categoryList");
+  const cats = [...new Set(products.map(p => (p.category||"").trim()).filter(Boolean))].sort();
+  dl.innerHTML = cats.map(c => `<option value="${c.replace(/"/g,'&quot;')}"></option>`).join("");
+}
+
 function renderStats(){
   let low=0, soon=0, expired=0;
   products.forEach(p => {
@@ -421,15 +436,26 @@ function renderGrid(){
   const grid = document.getElementById("grid");
   const emptyMsg = document.getElementById("emptyMsg");
   grid.innerHTML = "";
-  const visible = products
+  const q = query.trim().toLowerCase();
+  const filtered = products
     .filter(p => filter==="all" ? true : statusOf(p)===filter)
-    .filter(p => p.name.toLowerCase().includes(query.trim().toLowerCase()) || p.category.includes(query.trim()));
+    .filter(p => p.name.toLowerCase().includes(q) || (p.category||"").toLowerCase().includes(q));
 
-  if(visible.length === 0){
+  if(filtered.length === 0){
     emptyMsg.classList.remove("hidden");
+    document.getElementById("gridNote").textContent = "";
     return;
   }
   emptyMsg.classList.add("hidden");
+
+  let visible = filtered;
+  const noteEl = document.getElementById("gridNote");
+  if(!q && filtered.length > RENDER_LIMIT){
+    visible = filtered.slice(0, RENDER_LIMIT);
+    noteEl.textContent = `${RENDER_LIMIT} مورد از ${filtered.length} — برای دیدن بقیه جستجو کنید`;
+  } else {
+    noteEl.textContent = "";
+  }
 
   visible.forEach(p => {
     const s = statusOf(p);
@@ -482,6 +508,7 @@ function render(){
   renderFilters();
   renderStats();
   renderGrid();
+  renderCategoryDatalist();
 }
 
 function adjustQty(id, delta){
@@ -530,7 +557,7 @@ function openModal(p){
   editingId = p.id || null;
   document.getElementById("modalTitle").textContent = editingId ? "ویرایش محصول" : "محصول جدید";
   document.getElementById("f_name").value = p.name || "";
-  document.getElementById("f_category").value = p.category || CATS[0];
+  document.getElementById("f_category").value = p.category || "";
   document.getElementById("f_unit").value = p.unit || UNITS[0];
   document.getElementById("f_currency").value = p.currency || "toman";
   document.getElementById("f_wholesale").value = p.wholesale ?? "";
@@ -592,34 +619,66 @@ document.getElementById("btnSettingsSave").onclick = () => {
 };
 
 /* ---------- invoice ---------- */
-function fillInvoiceProductSelect(){
-  const sel = document.getElementById("inv_product");
-  sel.innerHTML = "";
-  products.forEach(p => {
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.textContent = p.name;
-    sel.appendChild(opt);
-  });
-}
+let selectedInvoiceProduct = null;
+
 document.getElementById("btnInvoice").onclick = () => {
   invoiceItems = [];
   document.getElementById("inv_customer").value = "";
-  fillInvoiceProductSelect();
+  document.getElementById("inv_productSearch").value = "";
+  selectedInvoiceProduct = null;
+  hideInvoiceResults();
   renderInvoiceItems();
   document.getElementById("invoiceOverlay").classList.remove("hidden");
 };
 document.getElementById("btnInvoiceCancel").onclick = () => document.getElementById("invoiceOverlay").classList.add("hidden");
 document.getElementById("invoiceOverlay").onclick = () => document.getElementById("invoiceOverlay").classList.add("hidden");
 
+function hideInvoiceResults(){
+  document.getElementById("inv_productResults").classList.add("hidden");
+}
+
+document.getElementById("inv_productSearch").addEventListener("input", (e) => {
+  selectedInvoiceProduct = null;
+  const q = e.target.value.trim().toLowerCase();
+  const box = document.getElementById("inv_productResults");
+  if(!q){ box.classList.add("hidden"); return; }
+  const matches = products.filter(p => p.name.toLowerCase().includes(q)).slice(0, 25);
+  box.innerHTML = "";
+  if(matches.length === 0){
+    box.innerHTML = `<div class="inv-result-empty">محصولی پیدا نشد</div>`;
+  } else {
+    matches.forEach(p => {
+      const item = document.createElement("div");
+      item.className = "inv-result-item";
+      item.textContent = p.name;
+      item.onclick = () => {
+        selectedInvoiceProduct = p;
+        document.getElementById("inv_productSearch").value = p.name;
+        hideInvoiceResults();
+      };
+      box.appendChild(item);
+    });
+  }
+  box.classList.remove("hidden");
+});
+document.getElementById("inv_productSearch").addEventListener("focus", (e) => {
+  if(e.target.value.trim()) e.target.dispatchEvent(new Event("input"));
+});
+
 document.getElementById("inv_addBtn").onclick = () => {
-  const pid = document.getElementById("inv_product").value;
-  const p = products.find(x => x.id === pid);
-  if(!p) return;
+  let p = selectedInvoiceProduct;
+  if(!p){
+    const typed = document.getElementById("inv_productSearch").value.trim().toLowerCase();
+    p = products.find(x => x.name.toLowerCase() === typed);
+  }
+  if(!p){ alert("اول یه محصول رو از لیست جستجو انتخاب کنید."); return; }
   const priceType = document.getElementById("inv_priceType").value;
   const qty = Math.max(1, toNum(document.getElementById("inv_qty").value) || 1);
   const unitToman = tomanPrice(p, priceType);
   invoiceItems.push({ name: p.name, qty, unitToman, lineTotal: unitToman * qty });
+  document.getElementById("inv_productSearch").value = "";
+  selectedInvoiceProduct = null;
+  hideInvoiceResults();
   renderInvoiceItems();
 };
 
@@ -698,7 +757,6 @@ document.getElementById("importFile").addEventListener("change", (e) => {
   e.target.value = "";
 });
 
-fillSelect(document.getElementById("f_category"), CATS);
 fillSelect(document.getElementById("f_unit"), UNITS);
 load();
 render();
