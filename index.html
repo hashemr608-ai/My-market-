@@ -100,8 +100,14 @@
   .inv-result-item:active { background:var(--bg); }
   .inv-result-empty { padding:9px 12px; font-size:12px; opacity:.6; }
   .mm-grid-note { text-align:center; font-size:12px; opacity:.65; padding:10px; }
+  #inv_history { background:rgba(76,122,82,0.08); border:1px dashed var(--green); border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:11px; }
+  #inv_history .hist-title { font-weight:700; margin-bottom:4px; }
+  #inv_history .hist-row { display:flex; justify-content:space-between; padding:2px 0; }
   .inv-items { border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:10px; }
-  .inv-item-row { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--line); background:#fff; }
+  .inv-item-row { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--line); background:#fff; gap:6px; }
+  .inv-item-row .inv-item-name { flex:1; }
+  .inv-item-row .inv-item-qty { display:flex; align-items:center; gap:4px; }
+  .inv-item-row .inv-item-qty button { width:20px; height:20px; border-radius:5px; border:1px solid var(--line); background:#fff; font-family:inherit; font-weight:700; cursor:pointer; line-height:1; padding:0; }
   .inv-item-row:last-child { border-bottom:none; }
   .inv-item-row .rm { color:var(--red); background:none; border:none; font-weight:700; cursor:pointer; font-family:inherit; }
   .inv-total { display:flex; justify-content:space-between; font-weight:800; font-size:15px; padding:10px 4px; }
@@ -243,16 +249,17 @@
     <h3>فاکتور جدید</h3>
     <div class="mm-field">
       <label>نام مشتری (اختیاری)</label>
-      <input id="inv_customer" placeholder="نام مشتری" />
+      <input id="inv_customer" list="customerList" placeholder="نام مشتری" />
+      <datalist id="customerList"></datalist>
     </div>
+    <div id="inv_history" class="hidden"></div>
     <div class="inv-add-row" style="flex-wrap:wrap; position:relative;">
-      <input type="text" id="inv_productSearch" placeholder="جستجوی محصول…" autocomplete="off" style="flex:2; min-width:150px;" />
+      <input type="text" id="inv_productSearch" placeholder="جستجوی محصول… (چند تا رو می‌تونید پشت‌سرهم بزنید)" autocomplete="off" style="flex:2; min-width:150px;" />
       <select id="inv_priceType">
+        <option value="wholesale" selected>عمده</option>
         <option value="retail">تک‌فروشی</option>
-        <option value="wholesale">عمده</option>
       </select>
       <input type="number" min="1" id="inv_qty" placeholder="تعداد" value="1" style="flex:1; min-width:60px;" />
-      <button type="button" id="inv_addBtn">افزودن</button>
       <div id="inv_productResults" class="inv-results hidden"></div>
     </div>
     <div class="inv-items" id="inv_items"></div>
@@ -263,6 +270,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- backup modal -->
 <div class="mm-overlay hidden" id="backupOverlay">
@@ -302,6 +310,7 @@ const UNITS = ["عدد", "بسته", "ست", "میلی‌لیتر"];
 const RENDER_LIMIT = 60;
 const STORAGE_KEY = "mymarket:products";
 const SETTINGS_KEY = "mymarket:settings";
+const INVOICES_KEY = "mymarket:invoices";
 const LOW_STOCK_THRESHOLD = 5;
 const SOON_DAYS = 3;
 
@@ -319,6 +328,7 @@ let filter = "all";
 let query = "";
 let editingId = null;
 let invoiceItems = [];
+let invoices = [];
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function toNum(v){ return Number(v) || 0; }
@@ -376,12 +386,19 @@ function load(){
     const rawS = localStorage.getItem(SETTINGS_KEY);
     if(rawS) settings = JSON.parse(rawS);
   } catch(e) {}
+  try {
+    const rawI = localStorage.getItem(INVOICES_KEY);
+    if(rawI) invoices = JSON.parse(rawI);
+  } catch(e) { invoices = []; }
 }
 function save(){
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); } catch(e) {}
 }
 function saveSettings(){
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e) {}
+}
+function saveInvoices(){
+  try { localStorage.setItem(INVOICES_KEY, JSON.stringify(invoices)); } catch(e) {}
 }
 
 function renderFilters(){
@@ -421,14 +438,14 @@ function priceBlockHtml(p){
   const rTo = tomanPrice(p, "retail");
   if(p.currency === "aed"){
     return `
-      <div class="mm-price-line">${toNum(p.retail).toLocaleString("fa-IR")} AED</div>
-      <div class="mm-price-sub">≈ ${fmtToman(rTo)}</div>
-      <div class="mm-price-sub">عمده: ${toNum(p.wholesale).toLocaleString("fa-IR")} AED (≈ ${fmtToman(wTo)})</div>
+      <div class="mm-price-line">${toNum(p.wholesale).toLocaleString("fa-IR")} AED</div>
+      <div class="mm-price-sub">≈ ${fmtToman(wTo)}</div>
+      <div class="mm-price-sub">تک‌فروشی: ${toNum(p.retail).toLocaleString("fa-IR")} AED (≈ ${fmtToman(rTo)})</div>
     `;
   }
   return `
-    <div class="mm-price-line">${fmtToman(rTo)}</div>
-    <div class="mm-price-sub">عمده: ${fmtToman(wTo)}</div>
+    <div class="mm-price-line">${fmtToman(wTo)}</div>
+    <div class="mm-price-sub">تک‌فروشی: ${fmtToman(rTo)}</div>
   `;
 }
 
@@ -619,15 +636,37 @@ document.getElementById("btnSettingsSave").onclick = () => {
 };
 
 /* ---------- invoice ---------- */
-let selectedInvoiceProduct = null;
+function renderCustomerDatalist(){
+  const dl = document.getElementById("customerList");
+  const names = [...new Set(invoices.map(i => (i.customer||"").trim()).filter(Boolean))];
+  dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g,'&quot;')}"></option>`).join("");
+}
+
+function renderCustomerHistory(){
+  const box = document.getElementById("inv_history");
+  const name = document.getElementById("inv_customer").value.trim().toLowerCase();
+  if(!name){ box.classList.add("hidden"); box.innerHTML=""; return; }
+  const matches = invoices.filter(i => (i.customer||"").trim().toLowerCase() === name);
+  if(matches.length === 0){ box.classList.add("hidden"); box.innerHTML=""; return; }
+  const sorted = [...matches].sort((a,b) => new Date(b.date) - new Date(a.date));
+  let html = `<div class="hist-title">خریدهای قبلی ${sorted.length} فاکتور</div>`;
+  sorted.slice(0,5).forEach(inv => {
+    html += `<div class="hist-row"><span>${fmtDate(inv.date)}</span><span>${fmtToman(inv.total)}</span></div>`;
+  });
+  box.innerHTML = html;
+  box.classList.remove("hidden");
+}
+document.getElementById("inv_customer").addEventListener("input", renderCustomerHistory);
 
 document.getElementById("btnInvoice").onclick = () => {
   invoiceItems = [];
   document.getElementById("inv_customer").value = "";
   document.getElementById("inv_productSearch").value = "";
-  selectedInvoiceProduct = null;
+  document.getElementById("inv_qty").value = "1";
   hideInvoiceResults();
   renderInvoiceItems();
+  renderCustomerDatalist();
+  renderCustomerHistory();
   document.getElementById("invoiceOverlay").classList.remove("hidden");
 };
 document.getElementById("btnInvoiceCancel").onclick = () => document.getElementById("invoiceOverlay").classList.add("hidden");
@@ -637,8 +676,21 @@ function hideInvoiceResults(){
   document.getElementById("inv_productResults").classList.add("hidden");
 }
 
+function addInvoiceProduct(p){
+  const priceType = document.getElementById("inv_priceType").value;
+  const qty = Math.max(1, toNum(document.getElementById("inv_qty").value) || 1);
+  const existing = invoiceItems.find(it => it.name === p.name && it.priceType === priceType);
+  if(existing){
+    existing.qty += qty;
+    existing.lineTotal = existing.qty * existing.unitToman;
+  } else {
+    const unitToman = tomanPrice(p, priceType);
+    invoiceItems.push({ name: p.name, qty, unitToman, lineTotal: unitToman * qty, priceType });
+  }
+  renderInvoiceItems();
+}
+
 document.getElementById("inv_productSearch").addEventListener("input", (e) => {
-  selectedInvoiceProduct = null;
   const q = e.target.value.trim().toLowerCase();
   const box = document.getElementById("inv_productResults");
   if(!q){ box.classList.add("hidden"); return; }
@@ -652,9 +704,9 @@ document.getElementById("inv_productSearch").addEventListener("input", (e) => {
       item.className = "inv-result-item";
       item.textContent = p.name;
       item.onclick = () => {
-        selectedInvoiceProduct = p;
-        document.getElementById("inv_productSearch").value = p.name;
-        hideInvoiceResults();
+        addInvoiceProduct(p);
+        // keep the search box + results open so several items can be picked in a row
+        document.getElementById("inv_productSearch").focus();
       };
       box.appendChild(item);
     });
@@ -664,23 +716,13 @@ document.getElementById("inv_productSearch").addEventListener("input", (e) => {
 document.getElementById("inv_productSearch").addEventListener("focus", (e) => {
   if(e.target.value.trim()) e.target.dispatchEvent(new Event("input"));
 });
-
-document.getElementById("inv_addBtn").onclick = () => {
-  let p = selectedInvoiceProduct;
-  if(!p){
-    const typed = document.getElementById("inv_productSearch").value.trim().toLowerCase();
-    p = products.find(x => x.name.toLowerCase() === typed);
+document.addEventListener("click", (e) => {
+  const box = document.getElementById("inv_productResults");
+  const input = document.getElementById("inv_productSearch");
+  if(box && !box.classList.contains("hidden") && e.target !== input && !box.contains(e.target)){
+    box.classList.add("hidden");
   }
-  if(!p){ alert("اول یه محصول رو از لیست جستجو انتخاب کنید."); return; }
-  const priceType = document.getElementById("inv_priceType").value;
-  const qty = Math.max(1, toNum(document.getElementById("inv_qty").value) || 1);
-  const unitToman = tomanPrice(p, priceType);
-  invoiceItems.push({ name: p.name, qty, unitToman, lineTotal: unitToman * qty });
-  document.getElementById("inv_productSearch").value = "";
-  selectedInvoiceProduct = null;
-  hideInvoiceResults();
-  renderInvoiceItems();
-};
+});
 
 function renderInvoiceItems(){
   const el = document.getElementById("inv_items");
@@ -690,7 +732,26 @@ function renderInvoiceItems(){
     total += it.lineTotal;
     const row = document.createElement("div");
     row.className = "inv-item-row";
-    row.innerHTML = `<span>${it.name} × ${it.qty}</span><span>${fmtToman(it.lineTotal)}</span><button class="rm" data-i="${idx}">حذف</button>`;
+    row.innerHTML = `
+      <span class="inv-item-name">${it.name}</span>
+      <span class="inv-item-qty">
+        <button data-act="dec">−</button>
+        <span>${it.qty}</span>
+        <button data-act="inc">+</button>
+      </span>
+      <span>${fmtToman(it.lineTotal)}</span>
+      <button class="rm">حذف</button>
+    `;
+    row.querySelector('[data-act="dec"]').onclick = () => {
+      it.qty = Math.max(1, it.qty - 1);
+      it.lineTotal = it.qty * it.unitToman;
+      renderInvoiceItems();
+    };
+    row.querySelector('[data-act="inc"]').onclick = () => {
+      it.qty += 1;
+      it.lineTotal = it.qty * it.unitToman;
+      renderInvoiceItems();
+    };
     row.querySelector(".rm").onclick = () => { invoiceItems.splice(idx,1); renderInvoiceItems(); };
     el.appendChild(row);
   });
@@ -700,6 +761,7 @@ function renderInvoiceItems(){
 document.getElementById("btnInvoicePrint").onclick = () => {
   if(invoiceItems.length === 0){ alert("حداقل یه قلم کالا اضافه کنید."); return; }
   const customer = document.getElementById("inv_customer").value.trim();
+  const nowIso = new Date().toISOString();
   document.getElementById("pi_customer").textContent = customer ? "مشتری: " + customer : "";
   document.getElementById("pi_date").textContent = "تاریخ: " + new Date().toLocaleDateString("fa-IR");
   const body = document.getElementById("pi_body");
@@ -712,6 +774,16 @@ document.getElementById("btnInvoicePrint").onclick = () => {
     body.appendChild(tr);
   });
   document.getElementById("pi_total").textContent = "جمع کل: " + fmtToman(total);
+
+  invoices.push({
+    id: uid(),
+    customer,
+    date: nowIso,
+    items: invoiceItems.map(it => ({ name: it.name, qty: it.qty, unitToman: it.unitToman, lineTotal: it.lineTotal })),
+    total
+  });
+  saveInvoices();
+
   window.print();
 };
 
@@ -721,7 +793,7 @@ document.getElementById("btnBackupClose").onclick = () => document.getElementByI
 document.getElementById("backupOverlay").onclick = () => document.getElementById("backupOverlay").classList.add("hidden");
 
 document.getElementById("btnExport").onclick = () => {
-  const payload = { products, settings, exportedAt: new Date().toISOString() };
+  const payload = { products, settings, invoices, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -745,7 +817,8 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if(!confirm("بازیابی این فایل، اطلاعات فعلی رو جایگزین می‌کنه. ادامه بدم؟")) return;
       products = data.products.map(migrateProduct);
       settings = data.settings || settings;
-      save(); saveSettings();
+      invoices = Array.isArray(data.invoices) ? data.invoices : invoices;
+      save(); saveSettings(); saveInvoices();
       document.getElementById("backupOverlay").classList.add("hidden");
       render();
       alert("بازیابی با موفقیت انجام شد.");
