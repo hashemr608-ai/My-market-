@@ -134,16 +134,32 @@
 </head>
 <body>
 
+<div class="mm-overlay hidden" id="lockOverlay" style="z-index:200;">
+  <div class="mm-modal" style="text-align:center;">
+    <h3 id="lockTitle">🔒 ورود به اپ</h3>
+    <div class="mm-field">
+      <input type="password" id="lockInput" placeholder="رمز عبور" style="text-align:center; font-size:16px;" />
+    </div>
+    <div class="mm-hint" id="lockError" style="color:var(--red);"></div>
+    <div class="mm-modal-actions">
+      <button type="button" class="mm-btn-save" id="lockSubmit" style="flex:1;">ورود</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="appRoot" class="hidden">
 <div class="mm-header">
-  <div class="mm-title">مای‌مارکت <span class="stamp">مدیریت موجودی</span></div>
+  <div class="mm-title"><span id="storeNameDisplay">مای‌مارکت</span> <span class="stamp">مدیریت موجودی</span></div>
   <div class="mm-header-btns">
-    <button class="mm-icon-btn" id="btnSettings" title="نرخ ارز">$</button>
+    <button class="mm-icon-btn" id="btnSettings" title="تنظیمات">⚙️</button>
     <button class="mm-add-btn" id="btnAdd">+ محصول</button>
   </div>
 </div>
 
 <div class="mm-actions-row">
   <button class="mm-action-chip" id="btnInvoice">🧾 فاکتور جدید</button>
+  <button class="mm-action-chip" id="btnBulkPrice">✏️ ویرایش قیمت گروهی</button>
   <button class="mm-action-chip" id="btnBackup">💾 پشتیبان‌گیری</button>
 </div>
 
@@ -230,18 +246,93 @@
 <!-- settings modal -->
 <div class="mm-overlay hidden" id="settingsOverlay">
   <div class="mm-modal" onclick="event.stopPropagation()">
-    <h3>نرخ تبدیل ارز</h3>
+    <h3>تنظیمات فروشگاه</h3>
+
     <div class="mm-field">
+      <label>نام فروشگاه</label>
+      <input id="s_storeName" placeholder="مای‌مارکت" />
+    </div>
+    <div class="mm-field-row">
+      <div class="mm-field">
+        <label>شماره تماس (اختیاری)</label>
+        <input id="s_storePhone" placeholder="09xxxxxxxxx" />
+      </div>
+      <div class="mm-field">
+        <label>آدرس (اختیاری)</label>
+        <input id="s_storeAddress" placeholder="آدرس فروشگاه" />
+      </div>
+    </div>
+
+    <div class="mm-field" style="margin-top:14px;">
       <label>نرخ هر ۱ درهم امارات (AED) به تومان</label>
       <input type="number" min="0" id="s_aedRate" placeholder="مثلاً 18000" />
     </div>
     <div class="mm-hint">این نرخ برای نمایش معادل تومانی محصولاتی که به درهم قیمت‌گذاری شدن استفاده می‌شه.</div>
+
+    <div class="mm-field" style="margin-top:14px;">
+      <label>رمز دسترسی به اپ (اختیاری)</label>
+      <input id="s_password" placeholder="خالی = بدون رمز" />
+    </div>
+    <div class="mm-hint">اگه رمز بذارید، هر بار باز کردن اپ روی این گوشی، رمز پرسیده می‌شه. این یه قفل سادست، برای جلوگیری از دیدن اتفاقی توسط دیگران — امنیت حرفه‌ای در حد سایت‌های بانکی نداره.</div>
+
     <div class="mm-modal-actions">
       <button type="button" class="mm-btn-cancel" id="btnSettingsCancel">انصراف</button>
       <button type="button" class="mm-btn-save" id="btnSettingsSave">ذخیره</button>
     </div>
   </div>
 </div>
+
+<!-- bulk price edit modal -->
+<div class="mm-overlay hidden" id="bulkPriceOverlay">
+  <div class="mm-modal" onclick="event.stopPropagation()">
+    <h3>ویرایش قیمت گروهی</h3>
+
+    <div class="mm-field">
+      <label>اعمال روی</label>
+      <select id="bp_scope">
+        <option value="all">همهٔ محصولات</option>
+        <option value="category">فقط یه دسته‌بندی خاص</option>
+      </select>
+    </div>
+    <div class="mm-field hidden" id="bp_categoryWrap">
+      <label>دسته‌بندی</label>
+      <select id="bp_category"></select>
+    </div>
+
+    <div class="mm-field">
+      <label>روی کدوم قیمت‌ها اعمال بشه</label>
+      <select id="bp_which">
+        <option value="both">عمده و تک‌فروشی</option>
+        <option value="wholesale">فقط عمده</option>
+        <option value="retail">فقط تک‌فروشی</option>
+      </select>
+    </div>
+
+    <div class="mm-field-row">
+      <div class="mm-field">
+        <label>نوع تغییر</label>
+        <select id="bp_type">
+          <option value="pct_inc">افزایش درصدی</option>
+          <option value="pct_dec">کاهش درصدی</option>
+          <option value="amt_inc">افزایش مبلغ ثابت</option>
+          <option value="amt_dec">کاهش مبلغ ثابت</option>
+        </select>
+      </div>
+      <div class="mm-field">
+        <label id="bp_valueLabel">مقدار (٪)</label>
+        <input type="number" min="0" step="0.01" id="bp_value" placeholder="مثلاً 10" />
+      </div>
+    </div>
+    <div class="mm-hint">مبلغ ثابت به واحد پول خودِ هر محصول کم/زیاد می‌شه (تومانی به تومان، درهمی به درهم).</div>
+    <div class="mm-hint" id="bp_preview" style="font-weight:700;"></div>
+
+    <div class="mm-modal-actions">
+      <button type="button" class="mm-btn-cancel" id="btnBulkPriceCancel">انصراف</button>
+      <button type="button" class="mm-btn-save" id="btnBulkPriceApply">اعمال تغییرات</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- invoice modal -->
 <div class="mm-overlay hidden" id="invoiceOverlay">
@@ -289,11 +380,14 @@
 </div>
 
 <!-- printable invoice -->
+</div>
+
 <div id="printArea">
   <div class="pi-header">
-    <h2>مای‌مارکت</h2>
+    <h2 id="pi_storeName">مای‌مارکت</h2>
     <div>فاکتور فروش</div>
   </div>
+  <div class="pi-meta" id="pi_storeInfo" style="font-size:11px; opacity:.8; margin-top:-10px; margin-bottom:10px;"></div>
   <div class="pi-meta">
     <span id="pi_customer"></span>
     <span id="pi_date"></span>
@@ -323,7 +417,7 @@ const STATUS_META = {
 const FILTERS = [["all","همه"],["fresh","موجود"],["low","موجودی کم"],["soon","نزدیک انقضا"],["expired","منقضی"]];
 
 let products = [];
-let settings = { aedRate: 0 };
+let settings = { aedRate: 0, storeName: "مای‌مارکت", storePhone: "", storeAddress: "", password: "" };
 let filter = "all";
 let query = "";
 let editingId = null;
@@ -526,6 +620,18 @@ function render(){
   renderStats();
   renderGrid();
   renderCategoryDatalist();
+  renderStoreName();
+}
+
+function renderStoreName(){
+  const name = settings.storeName || "مای‌مارکت";
+  document.getElementById("storeNameDisplay").textContent = name;
+  document.getElementById("pi_storeName").textContent = name;
+  document.title = name + " - مدیریت موجودی";
+  const infoParts = [];
+  if(settings.storePhone) infoParts.push("تلفن: " + settings.storePhone);
+  if(settings.storeAddress) infoParts.push("آدرس: " + settings.storeAddress);
+  document.getElementById("pi_storeInfo").textContent = infoParts.join(" — ");
 }
 
 function adjustQty(id, delta){
@@ -624,12 +730,20 @@ document.getElementById("productForm").onsubmit = (e) => {
 /* ---------- settings (exchange rate) ---------- */
 document.getElementById("btnSettings").onclick = () => {
   document.getElementById("s_aedRate").value = settings.aedRate || "";
+  document.getElementById("s_storeName").value = settings.storeName || "";
+  document.getElementById("s_storePhone").value = settings.storePhone || "";
+  document.getElementById("s_storeAddress").value = settings.storeAddress || "";
+  document.getElementById("s_password").value = settings.password || "";
   document.getElementById("settingsOverlay").classList.remove("hidden");
 };
 document.getElementById("btnSettingsCancel").onclick = () => document.getElementById("settingsOverlay").classList.add("hidden");
 document.getElementById("settingsOverlay").onclick = () => document.getElementById("settingsOverlay").classList.add("hidden");
 document.getElementById("btnSettingsSave").onclick = () => {
   settings.aedRate = toNum(document.getElementById("s_aedRate").value);
+  settings.storeName = document.getElementById("s_storeName").value.trim();
+  settings.storePhone = document.getElementById("s_storePhone").value.trim();
+  settings.storeAddress = document.getElementById("s_storeAddress").value.trim();
+  settings.password = document.getElementById("s_password").value;
   saveSettings();
   document.getElementById("settingsOverlay").classList.add("hidden");
   render();
@@ -830,9 +944,108 @@ document.getElementById("importFile").addEventListener("change", (e) => {
   e.target.value = "";
 });
 
+/* ---------- access lock ---------- */
+const UNLOCK_KEY = "mymarket:unlocked";
+function checkLock(){
+  if(!settings.password){
+    document.getElementById("lockOverlay").classList.add("hidden");
+    document.getElementById("appRoot").classList.remove("hidden");
+    return;
+  }
+  if(sessionStorage.getItem(UNLOCK_KEY) === "1"){
+    document.getElementById("lockOverlay").classList.add("hidden");
+    document.getElementById("appRoot").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("appRoot").classList.add("hidden");
+  document.getElementById("lockOverlay").classList.remove("hidden");
+  document.getElementById("lockInput").value = "";
+  document.getElementById("lockError").textContent = "";
+  setTimeout(() => document.getElementById("lockInput").focus(), 100);
+}
+function tryUnlock(){
+  const val = document.getElementById("lockInput").value;
+  if(val && val === settings.password){
+    sessionStorage.setItem(UNLOCK_KEY, "1");
+    document.getElementById("lockOverlay").classList.add("hidden");
+    document.getElementById("appRoot").classList.remove("hidden");
+  } else {
+    document.getElementById("lockError").textContent = "رمز اشتباهه، دوباره امتحان کنید.";
+  }
+}
+document.getElementById("lockSubmit").onclick = tryUnlock;
+document.getElementById("lockInput").addEventListener("keydown", (e) => { if(e.key === "Enter") tryUnlock(); });
+
+/* ---------- bulk price edit ---------- */
+function renderBulkCategorySelect(){
+  const sel = document.getElementById("bp_category");
+  const cats = [...new Set(products.map(p => (p.category||"").trim()).filter(Boolean))].sort();
+  sel.innerHTML = cats.map(c => `<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join("") || `<option value="">—</option>`;
+}
+function bulkMatchedProducts(){
+  const scope = document.getElementById("bp_scope").value;
+  if(scope === "category"){
+    const cat = document.getElementById("bp_category").value;
+    return products.filter(p => (p.category||"").trim() === cat);
+  }
+  return products;
+}
+function updateBulkPreview(){
+  const n = bulkMatchedProducts().length;
+  document.getElementById("bp_preview").textContent = n ? `${n} محصول تحت تأثیر قرار می‌گیره` : "محصولی مطابقت نداره";
+  const type = document.getElementById("bp_type").value;
+  document.getElementById("bp_valueLabel").textContent = type.startsWith("pct") ? "مقدار (٪)" : "مقدار (به واحد پول خودِ محصول)";
+}
+document.getElementById("btnBulkPrice").onclick = () => {
+  renderBulkCategorySelect();
+  document.getElementById("bp_scope").value = "all";
+  document.getElementById("bp_categoryWrap").classList.add("hidden");
+  document.getElementById("bp_which").value = "both";
+  document.getElementById("bp_type").value = "pct_inc";
+  document.getElementById("bp_value").value = "";
+  updateBulkPreview();
+  document.getElementById("bulkPriceOverlay").classList.remove("hidden");
+};
+document.getElementById("btnBulkPriceCancel").onclick = () => document.getElementById("bulkPriceOverlay").classList.add("hidden");
+document.getElementById("bulkPriceOverlay").onclick = () => document.getElementById("bulkPriceOverlay").classList.add("hidden");
+document.getElementById("bp_scope").addEventListener("change", (e) => {
+  document.getElementById("bp_categoryWrap").classList.toggle("hidden", e.target.value !== "category");
+  updateBulkPreview();
+});
+document.getElementById("bp_category").addEventListener("change", updateBulkPreview);
+document.getElementById("bp_type").addEventListener("change", updateBulkPreview);
+
+document.getElementById("btnBulkPriceApply").onclick = () => {
+  const targets = bulkMatchedProducts();
+  if(targets.length === 0){ alert("محصولی برای اعمال تغییرات پیدا نشد."); return; }
+  const which = document.getElementById("bp_which").value; // both | wholesale | retail
+  const type = document.getElementById("bp_type").value;
+  const val = toNum(document.getElementById("bp_value").value);
+  if(!val){ alert("یه مقدار وارد کنید."); return; }
+  if(!confirm(`قیمت ${targets.length} محصول تغییر می‌کنه. مطمئنید؟`)) return;
+
+  const fields = which === "both" ? ["wholesale","retail"] : [which];
+  targets.forEach(p => {
+    fields.forEach(f => {
+      const cur = toNum(p[f]);
+      let next = cur;
+      if(type === "pct_inc") next = cur + cur * (val/100);
+      else if(type === "pct_dec") next = cur - cur * (val/100);
+      else if(type === "amt_inc") next = cur + val;
+      else if(type === "amt_dec") next = cur - val;
+      p[f] = Math.max(0, Math.round(next * 100) / 100);
+    });
+  });
+  save();
+  document.getElementById("bulkPriceOverlay").classList.add("hidden");
+  render();
+  alert("قیمت‌ها بروزرسانی شد.");
+};
+
 fillSelect(document.getElementById("f_unit"), UNITS);
 load();
 render();
+checkLock();
 
 if("serviceWorker" in navigator){
   window.addEventListener("load", () => {
