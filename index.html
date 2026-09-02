@@ -104,12 +104,19 @@
   #inv_history .hist-title { font-weight:700; margin-bottom:4px; }
   #inv_history .hist-row { display:flex; justify-content:space-between; padding:2px 0; }
   .inv-items { border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:10px; }
-  .inv-item-row { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--line); background:#fff; gap:6px; }
-  .inv-item-row .inv-item-name { flex:1; }
+  .inv-item-row { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--line); background:#fff; gap:6px; }
+  .inv-item-row .inv-item-name { flex:1 1 100%; font-weight:700; }
   .inv-item-row .inv-item-qty { display:flex; align-items:center; gap:4px; }
   .inv-item-row .inv-item-qty button { width:20px; height:20px; border-radius:5px; border:1px solid var(--line); background:#fff; font-family:inherit; font-weight:700; cursor:pointer; line-height:1; padding:0; }
+  .inv-item-row .inv-item-price { display:flex; align-items:center; gap:4px; }
+  .inv-item-row .inv-item-price input { width:80px; padding:4px 6px; border-radius:6px; border:1px solid var(--line); font-family:inherit; font-size:12px; text-align:center; }
+  .inv-item-row .inv-item-total { font-weight:800; }
   .inv-item-row:last-child { border-bottom:none; }
   .inv-item-row .rm { color:var(--red); background:none; border:none; font-weight:700; cursor:pointer; font-family:inherit; }
+  .bp-select-list { max-height:200px; overflow-y:auto; border:1px solid var(--line); border-radius:8px; background:#fff; margin-top:6px; }
+  .bp-select-item { display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--line); }
+  .bp-select-item:last-child { border-bottom:none; }
+  .bp-select-item input { width:16px; height:16px; }
   .inv-total { display:flex; justify-content:space-between; font-weight:800; font-size:15px; padding:10px 4px; }
 
   /* backup */
@@ -292,11 +299,18 @@
       <select id="bp_scope">
         <option value="all">همهٔ محصولات</option>
         <option value="category">فقط یه دسته‌بندی خاص</option>
+        <option value="selection">انتخاب دستی محصولات (موردی)</option>
       </select>
     </div>
     <div class="mm-field hidden" id="bp_categoryWrap">
       <label>دسته‌بندی</label>
       <select id="bp_category"></select>
+    </div>
+    <div class="mm-field hidden" id="bp_selectionWrap">
+      <label>جستجو و انتخاب محصول (چندتا رو می‌تونید تیک بزنید)</label>
+      <input type="text" id="bp_selectSearch" placeholder="جستجوی محصول…" autocomplete="off" />
+      <div id="bp_selectList" class="bp-select-list"></div>
+      <div class="mm-hint" id="bp_selectedCount"></div>
     </div>
 
     <div class="mm-field">
@@ -853,7 +867,11 @@ function renderInvoiceItems(){
         <span>${it.qty}</span>
         <button data-act="inc">+</button>
       </span>
-      <span>${fmtToman(it.lineTotal)}</span>
+      <span class="inv-item-price">
+        <input type="number" min="0" step="0.01" value="${Math.round(it.unitToman)}" data-act="price" />
+        <span>تومان</span>
+      </span>
+      <span class="inv-item-total">${fmtToman(it.lineTotal)}</span>
       <button class="rm">حذف</button>
     `;
     row.querySelector('[data-act="dec"]').onclick = () => {
@@ -866,6 +884,12 @@ function renderInvoiceItems(){
       it.lineTotal = it.qty * it.unitToman;
       renderInvoiceItems();
     };
+    row.querySelector('[data-act="price"]').addEventListener("change", (e) => {
+      const newPrice = toNum(e.target.value);
+      it.unitToman = Math.max(0, newPrice);
+      it.lineTotal = it.qty * it.unitToman;
+      renderInvoiceItems();
+    });
     row.querySelector(".rm").onclick = () => { invoiceItems.splice(idx,1); renderInvoiceItems(); };
     el.appendChild(row);
   });
@@ -977,6 +1001,8 @@ document.getElementById("lockSubmit").onclick = tryUnlock;
 document.getElementById("lockInput").addEventListener("keydown", (e) => { if(e.key === "Enter") tryUnlock(); });
 
 /* ---------- bulk price edit ---------- */
+let bpSelectedIds = new Set();
+
 function renderBulkCategorySelect(){
   const sel = document.getElementById("bp_category");
   const cats = [...new Set(products.map(p => (p.category||"").trim()).filter(Boolean))].sort();
@@ -988,6 +1014,9 @@ function bulkMatchedProducts(){
     const cat = document.getElementById("bp_category").value;
     return products.filter(p => (p.category||"").trim() === cat);
   }
+  if(scope === "selection"){
+    return products.filter(p => bpSelectedIds.has(p.id));
+  }
   return products;
 }
 function updateBulkPreview(){
@@ -996,10 +1025,34 @@ function updateBulkPreview(){
   const type = document.getElementById("bp_type").value;
   document.getElementById("bp_valueLabel").textContent = type.startsWith("pct") ? "مقدار (٪)" : "مقدار (به واحد پول خودِ محصول)";
 }
+function renderBulkSelectList(){
+  const q = document.getElementById("bp_selectSearch").value.trim().toLowerCase();
+  const box = document.getElementById("bp_selectList");
+  const matches = (q ? products.filter(p => p.name.toLowerCase().includes(q)) : products).slice(0, 100);
+  box.innerHTML = "";
+  matches.forEach(p => {
+    const row = document.createElement("label");
+    row.className = "bp-select-item";
+    row.innerHTML = `<input type="checkbox" ${bpSelectedIds.has(p.id) ? "checked" : ""} /> <span>${p.name}</span>`;
+    row.querySelector("input").addEventListener("change", (e) => {
+      if(e.target.checked) bpSelectedIds.add(p.id); else bpSelectedIds.delete(p.id);
+      document.getElementById("bp_selectedCount").textContent = `${bpSelectedIds.size} محصول انتخاب شده`;
+      updateBulkPreview();
+    });
+    box.appendChild(row);
+  });
+  if(matches.length === 0) box.innerHTML = `<div class="inv-result-empty">محصولی پیدا نشد</div>`;
+}
+document.getElementById("bp_selectSearch").addEventListener("input", renderBulkSelectList);
+
 document.getElementById("btnBulkPrice").onclick = () => {
   renderBulkCategorySelect();
+  bpSelectedIds = new Set();
   document.getElementById("bp_scope").value = "all";
   document.getElementById("bp_categoryWrap").classList.add("hidden");
+  document.getElementById("bp_selectionWrap").classList.add("hidden");
+  document.getElementById("bp_selectSearch").value = "";
+  document.getElementById("bp_selectedCount").textContent = "";
   document.getElementById("bp_which").value = "both";
   document.getElementById("bp_type").value = "pct_inc";
   document.getElementById("bp_value").value = "";
@@ -1010,6 +1063,8 @@ document.getElementById("btnBulkPriceCancel").onclick = () => document.getElemen
 document.getElementById("bulkPriceOverlay").onclick = () => document.getElementById("bulkPriceOverlay").classList.add("hidden");
 document.getElementById("bp_scope").addEventListener("change", (e) => {
   document.getElementById("bp_categoryWrap").classList.toggle("hidden", e.target.value !== "category");
+  document.getElementById("bp_selectionWrap").classList.toggle("hidden", e.target.value !== "selection");
+  if(e.target.value === "selection") renderBulkSelectList();
   updateBulkPreview();
 });
 document.getElementById("bp_category").addEventListener("change", updateBulkPreview);
@@ -1023,6 +1078,7 @@ document.getElementById("btnBulkPriceApply").onclick = () => {
   const val = toNum(document.getElementById("bp_value").value);
   if(!val){ alert("یه مقدار وارد کنید."); return; }
   if(!confirm(`قیمت ${targets.length} محصول تغییر می‌کنه. مطمئنید؟`)) return;
+
 
   const fields = which === "both" ? ["wholesale","retail"] : [which];
   targets.forEach(p => {
