@@ -1,4 +1,4 @@
-const CACHE_NAME = "mymarket-v6";
+const CACHE_NAME = "mymarket-v7";
 const ASSETS = [
   "./",
   "./index.html",

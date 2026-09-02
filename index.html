@@ -100,9 +100,13 @@
   .inv-result-item:active { background:var(--bg); }
   .inv-result-empty { padding:9px 12px; font-size:12px; opacity:.6; }
   .mm-grid-note { text-align:center; font-size:12px; opacity:.65; padding:10px; }
-  #inv_history { background:rgba(76,122,82,0.08); border:1px dashed var(--green); border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:11px; }
+  #inv_history { background:rgba(76,122,82,0.08); border:1px dashed var(--green); border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:11px; max-height:260px; overflow-y:auto; }
   #inv_history .hist-title { font-weight:700; margin-bottom:4px; }
-  #inv_history .hist-row { display:flex; justify-content:space-between; padding:2px 0; }
+  #inv_history .hist-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0 2px; gap:6px; border-top:1px dashed rgba(76,122,82,0.3); }
+  #inv_history .hist-row:first-of-type { border-top:none; }
+  #inv_history .hist-row span:first-child { flex:1; }
+  #inv_history .hist-print { flex:0 0 auto; font-size:10px; padding:3px 8px; border-radius:6px; border:1px solid var(--green); background:#fff; color:var(--green); font-family:inherit; font-weight:700; cursor:pointer; }
+  #inv_history .hist-items { font-size:10px; opacity:.65; padding-bottom:4px; }
   .inv-items { border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:10px; }
   .inv-item-row { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--line); background:#fff; gap:6px; }
   .inv-item-row .inv-item-name { flex:1 1 100%; font-weight:700; }
@@ -127,9 +131,9 @@
   /* printable invoice */
   #printArea { display:none; }
   @media print {
-    body * { visibility:hidden; }
-    #printArea, #printArea * { visibility:visible; }
-    #printArea { display:block; position:absolute; top:0; right:0; width:100%; padding:20px; }
+    html, body { height:auto !important; margin:0 !important; padding:0 !important; }
+    #appRoot, #lockOverlay { display:none !important; }
+    #printArea { display:block !important; position:static !important; width:100%; padding:0; }
   }
   .pi-header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:14px; }
   .pi-header h2 { margin:0; font-size:20px; }
@@ -772,16 +776,30 @@ function renderCustomerDatalist(){
 
 function renderCustomerHistory(){
   const box = document.getElementById("inv_history");
-  const name = document.getElementById("inv_customer").value.trim().toLowerCase();
-  if(!name){ box.classList.add("hidden"); box.innerHTML=""; return; }
-  const matches = invoices.filter(i => (i.customer||"").trim().toLowerCase() === name);
+  const q = document.getElementById("inv_customer").value.trim().toLowerCase();
+  if(!q){ box.classList.add("hidden"); box.innerHTML=""; return; }
+  const matches = invoices.filter(i => (i.customer||"").trim().toLowerCase().includes(q));
   if(matches.length === 0){ box.classList.add("hidden"); box.innerHTML=""; return; }
   const sorted = [...matches].sort((a,b) => new Date(b.date) - new Date(a.date));
-  let html = `<div class="hist-title">خریدهای قبلی ${sorted.length} فاکتور</div>`;
-  sorted.slice(0,5).forEach(inv => {
-    html += `<div class="hist-row"><span>${fmtDate(inv.date)}</span><span>${fmtToman(inv.total)}</span></div>`;
+  let html = `<div class="hist-title">خریدهای قبلی (${sorted.length} فاکتور)</div>`;
+  sorted.slice(0,8).forEach(inv => {
+    const itemsSummary = inv.items.map(it => `${it.name} × ${it.qty}`).join("، ");
+    html += `
+      <div class="hist-row">
+        <span>${fmtDate(inv.date)}${inv.customer ? " — " + inv.customer : ""}</span>
+        <span>${fmtToman(inv.total)}</span>
+        <button type="button" class="hist-print" data-id="${inv.id}">چاپ</button>
+      </div>
+      <div class="hist-items">${itemsSummary}</div>
+    `;
   });
   box.innerHTML = html;
+  box.querySelectorAll(".hist-print").forEach(btn => {
+    btn.onclick = () => {
+      const inv = invoices.find(x => x.id === btn.dataset.id);
+      if(inv) printInvoiceRecord(inv);
+    };
+  });
   box.classList.remove("hidden");
 }
 document.getElementById("inv_customer").addEventListener("input", renderCustomerHistory);
@@ -896,22 +914,31 @@ function renderInvoiceItems(){
   document.getElementById("inv_total").textContent = fmtToman(total);
 }
 
-document.getElementById("btnInvoicePrint").onclick = () => {
-  if(invoiceItems.length === 0){ alert("حداقل یه قلم کالا اضافه کنید."); return; }
-  const customer = document.getElementById("inv_customer").value.trim();
-  const nowIso = new Date().toISOString();
+function fillPrintArea(customer, dateIso, items, total){
   document.getElementById("pi_customer").textContent = customer ? "مشتری: " + customer : "";
-  document.getElementById("pi_date").textContent = "تاریخ: " + new Date().toLocaleDateString("fa-IR");
+  document.getElementById("pi_date").textContent = "تاریخ: " + new Date(dateIso).toLocaleDateString("fa-IR");
   const body = document.getElementById("pi_body");
   body.innerHTML = "";
-  let total = 0;
-  invoiceItems.forEach((it, idx) => {
-    total += it.lineTotal;
+  items.forEach((it, idx) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${idx+1}</td><td>${it.name}</td><td>${it.qty}</td><td>${Math.round(it.unitToman).toLocaleString("fa-IR")}</td><td>${Math.round(it.lineTotal).toLocaleString("fa-IR")}</td>`;
     body.appendChild(tr);
   });
   document.getElementById("pi_total").textContent = "جمع کل: " + fmtToman(total);
+}
+
+function printInvoiceRecord(inv){
+  fillPrintArea(inv.customer, inv.date, inv.items, inv.total);
+  window.print();
+}
+
+document.getElementById("btnInvoicePrint").onclick = () => {
+  if(invoiceItems.length === 0){ alert("حداقل یه قلم کالا اضافه کنید."); return; }
+  const customer = document.getElementById("inv_customer").value.trim();
+  const nowIso = new Date().toISOString();
+  let total = 0;
+  invoiceItems.forEach(it => { total += it.lineTotal; });
+  fillPrintArea(customer, nowIso, invoiceItems, total);
 
   invoices.push({
     id: uid(),
