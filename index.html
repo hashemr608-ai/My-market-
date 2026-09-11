@@ -54,7 +54,9 @@
   .mm-grid { display:grid; grid-template-columns:1fr; gap:12px; }
   @media (min-width:640px) { .mm-grid { grid-template-columns:1fr 1fr; } }
   .mm-card { position:relative; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; border-inline-start:5px solid var(--status-color, var(--green)); overflow:hidden; }
-  .mm-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
+  .mm-card-top { display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; }
+  .mm-card-top .mm-name-cat { flex:1; min-width:0; }
+  .mm-thumb { width:48px; height:48px; object-fit:cover; border-radius:8px; border:1px solid var(--line); flex:0 0 auto; background:#fff; }
   .mm-name { font-weight:700; font-size:15px; }
   .mm-cat { font-size:11px; opacity:.65; margin-top:2px; }
   .mm-price-block { text-align:left; }
@@ -198,6 +200,14 @@
       <div class="mm-field">
         <label>نام محصول</label>
         <input required id="f_name" />
+      </div>
+      <div class="mm-field">
+        <label>عکس محصول (اختیاری)</label>
+        <input type="file" accept="image/*" id="f_photoInput" />
+        <div id="f_photoPreviewWrap" class="hidden" style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+          <img id="f_photoPreview" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);" />
+          <button type="button" id="f_photoRemove" style="font-size:12px; padding:6px 10px; border-radius:7px; border:1px solid var(--red); color:var(--red); background:#fff; font-family:inherit; cursor:pointer;">حذف عکس</button>
+        </div>
       </div>
       <div class="mm-field-row">
         <div class="mm-field">
@@ -424,6 +434,93 @@ const STORAGE_KEY = "mymarket:products";
 const SETTINGS_KEY = "mymarket:settings";
 const INVOICES_KEY = "mymarket:invoices";
 const LOW_STOCK_THRESHOLD = 5;
+
+/* ---------- photo storage (IndexedDB — much bigger quota than localStorage) ---------- */
+const DB_NAME = "mymarket-db";
+const DB_VERSION = 1;
+const PHOTO_STORE = "photos";
+
+function openPhotoDB(){
+  return new Promise((resolve, reject) => {
+    if(!("indexedDB" in window)){ reject(new Error("no-indexeddb")); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if(!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function loadAllPhotos(){
+  try {
+    const db = await openPhotoDB();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(PHOTO_STORE, "readonly");
+      const store = tx.objectStore(PHOTO_STORE);
+      const req = store.openCursor();
+      const map = new Map();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if(cursor){ map.set(cursor.key, cursor.value); cursor.continue(); }
+        else resolve(map);
+      };
+      req.onerror = () => resolve(map);
+    });
+  } catch(e) { return new Map(); }
+}
+
+async function setPhoto(id, dataUrl){
+  photosMap.set(id, dataUrl);
+  try {
+    const db = await openPhotoDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(PHOTO_STORE, "readwrite");
+      tx.objectStore(PHOTO_STORE).put(dataUrl, id);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) { alert("ذخیرهٔ عکس با مشکل مواجه شد (ممکنه حافظهٔ گوشی پر باشه)."); }
+}
+
+async function deletePhoto(id){
+  photosMap.delete(id);
+  try {
+    const db = await openPhotoDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(PHOTO_STORE, "readwrite");
+      tx.objectStore(PHOTO_STORE).delete(id);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) {}
+}
+
+function compressImageFile(file, maxDim, quality){
+  maxDim = maxDim || 500;
+  quality = quality || 0.6;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else if(h >= w && h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("bad-image"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("read-failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
 const SOON_DAYS = 3;
 
 const STATUS_META = {
@@ -441,6 +538,9 @@ let query = "";
 let editingId = null;
 let invoiceItems = [];
 let invoices = [];
+let photosMap = new Map();
+let pendingPhotoDataUrl = null;
+let pendingPhotoRemoved = false;
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function toNum(v){ return Number(v) || 0; }
@@ -597,9 +697,11 @@ function renderGrid(){
     const card = document.createElement("div");
     card.className = "mm-card";
     card.style.setProperty("--status-color", meta.color);
+    const photo = photosMap.get(p.id);
     card.innerHTML = `
       <div class="mm-card-top">
-        <div>
+        ${photo ? `<img class="mm-thumb" src="${photo}" />` : ""}
+        <div class="mm-name-cat">
           <div class="mm-name"></div>
           <div class="mm-cat"></div>
         </div>
@@ -662,6 +764,7 @@ function removeProduct(id){
   if(!confirm("این محصول حذف بشه؟")) return;
   products = products.filter(p => p.id !== id);
   save(); render();
+  deletePhoto(id);
 }
 
 function fillSelect(el, options){
@@ -708,6 +811,18 @@ function openModal(p){
   document.getElementById("f_expiry").value = p.expiry || "";
   document.getElementById("f_note").value = p.note || "";
   updateCurrencyLabels();
+
+  pendingPhotoDataUrl = null;
+  pendingPhotoRemoved = false;
+  document.getElementById("f_photoInput").value = "";
+  const existingPhoto = p.id ? photosMap.get(p.id) : null;
+  if(existingPhoto){
+    document.getElementById("f_photoPreview").src = existingPhoto;
+    document.getElementById("f_photoPreviewWrap").classList.remove("hidden");
+  } else {
+    document.getElementById("f_photoPreviewWrap").classList.add("hidden");
+  }
+
   document.getElementById("overlay").classList.remove("hidden");
 }
 function openEdit(p){ openModal(p); }
@@ -718,7 +833,27 @@ document.getElementById("btnCancel").onclick = closeModal;
 document.getElementById("overlay").onclick = closeModal;
 document.getElementById("search").oninput = (e) => { query = e.target.value; render(); };
 
-document.getElementById("productForm").onsubmit = (e) => {
+document.getElementById("f_photoInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  try {
+    const dataUrl = await compressImageFile(file);
+    pendingPhotoDataUrl = dataUrl;
+    pendingPhotoRemoved = false;
+    document.getElementById("f_photoPreview").src = dataUrl;
+    document.getElementById("f_photoPreviewWrap").classList.remove("hidden");
+  } catch(err) {
+    alert("خطا در بارگذاری عکس.");
+  }
+});
+document.getElementById("f_photoRemove").addEventListener("click", () => {
+  pendingPhotoDataUrl = null;
+  pendingPhotoRemoved = true;
+  document.getElementById("f_photoPreviewWrap").classList.add("hidden");
+  document.getElementById("f_photoInput").value = "";
+});
+
+document.getElementById("productForm").onsubmit = async (e) => {
   e.preventDefault();
   const name = document.getElementById("f_name").value.trim();
   if(!name) return;
@@ -734,15 +869,25 @@ document.getElementById("productForm").onsubmit = (e) => {
     expiry: document.getElementById("f_expiry").value,
     note: document.getElementById("f_note").value,
   };
+  let finalId = editingId;
   if(editingId){
     const idx = products.findIndex(p => p.id === editingId);
     if(idx > -1) products[idx] = { ...products[idx], ...data };
   } else {
-    products.unshift({ id: uid(), ...data });
+    finalId = uid();
+    products.unshift({ id: finalId, ...data });
   }
   save();
   closeModal();
   render();
+
+  if(pendingPhotoDataUrl){
+    await setPhoto(finalId, pendingPhotoDataUrl);
+    render();
+  } else if(pendingPhotoRemoved){
+    await deletePhoto(finalId);
+    render();
+  }
 };
 
 /* ---------- settings (exchange rate) ---------- */
@@ -958,7 +1103,7 @@ document.getElementById("btnBackupClose").onclick = () => document.getElementByI
 document.getElementById("backupOverlay").onclick = () => document.getElementById("backupOverlay").classList.add("hidden");
 
 document.getElementById("btnExport").onclick = () => {
-  const payload = { products, settings, invoices, exportedAt: new Date().toISOString() };
+  const payload = { products, settings, invoices, photos: Object.fromEntries(photosMap), exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -975,7 +1120,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const data = JSON.parse(reader.result);
       if(!Array.isArray(data.products)) throw new Error("invalid");
@@ -984,6 +1129,11 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       settings = data.settings || settings;
       invoices = Array.isArray(data.invoices) ? data.invoices : invoices;
       save(); saveSettings(); saveInvoices();
+      if(data.photos && typeof data.photos === "object"){
+        for(const [id, dataUrl] of Object.entries(data.photos)){
+          await setPhoto(id, dataUrl);
+        }
+      }
       document.getElementById("backupOverlay").classList.add("hidden");
       render();
       alert("بازیابی با موفقیت انجام شد.");
@@ -1127,8 +1277,11 @@ document.getElementById("btnBulkPriceApply").onclick = () => {
 
 fillSelect(document.getElementById("f_unit"), UNITS);
 load();
-render();
-checkLock();
+(async function boot(){
+  photosMap = await loadAllPhotos();
+  render();
+  checkLock();
+})();
 
 if("serviceWorker" in navigator){
   window.addEventListener("load", () => {
